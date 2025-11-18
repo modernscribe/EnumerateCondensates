@@ -1,0 +1,23 @@
+clone the repo/download
+
+cd into MetsEnum folder
+
+python -m pip install -r requirements.txt
+
+
+
+Derive data starting from nothing
+but packed color point and cymatics.
+
+python ./1.py
+python ./2.py
+python ./3.py
+python ./4.py --export-predicted predicted_isotopes.json
+python ./5.py
+
+
+npm init
+npm start server.js
+
+
+Now use your web browser to navigate to http://localhost:3000

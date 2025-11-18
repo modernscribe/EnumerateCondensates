@@ -1,0 +1,16 @@
+{
+  "name": "molecule-explorer",
+  "version": "1.0.0",
+  "description": "Harmonic molecule and metamaterial explorer",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:dev": "NODE_ENV=development node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "keywords": [],
+  "author": "A scribe of light",
+  "license": "none"
+}
