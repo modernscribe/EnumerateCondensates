@@ -7,10 +7,6 @@ from typing import List, Dict, Tuple
 
 import numpy as np
 
-# =========================
-# CONFIG
-# =========================
-
 N_DIM = 12
 PRINCIPLES = ["Truth", "Purity", "Law", "Love", "Wisdom", "Life", "Glory"]
 EPS = 1e-12
@@ -148,10 +144,6 @@ C_LIGHT = 2.99792458e8
 H_PLANCK = 6.62607015e-34
 E_CHARGE = 1.602176634e-19
 
-# =========================
-# ZERO / PRINCIPLE OPERATORS
-# =========================
-
 def Null_point() -> float:
     return 0.0
 
@@ -214,20 +206,17 @@ PRINCIPLE_MAP = {
 def apply_principle(name: str, x: np.ndarray) -> np.ndarray:
     return PRINCIPLE_MAP[name](x)
 
-# =========================
-# FREQUENCY MODEL
-# =========================
+def steps_for_temperament(temperament: str) -> int:
+    if temperament in ("equal", "12tet"):
+        return 12
+    if temperament == "11tet":
+        return 11
+    return 12
 
 def omega_k(k: int, f0: float, temperament: str = "equal") -> float:
-    if temperament == "equal":
-        ratio = 2.0 ** (k / 12.0)
-    else:
-        ratio = 2.0 ** (k / 12.0)
+    steps = steps_for_temperament(temperament)
+    ratio = 2.0 ** (k / float(steps))
     return 2.0 * math.pi * f0 * ratio
-
-# =========================
-# HOLONOMY FOR GIVEN f0
-# =========================
 
 def compute_holonomy_for_f0(fp: np.ndarray, enabled: np.ndarray, f0: float, temperament: str = "equal") -> Dict:
     holonomies: Dict[str, Dict] = {}
@@ -265,10 +254,6 @@ def compute_holonomy_for_f0(fp: np.ndarray, enabled: np.ndarray, f0: float, temp
         },
     }
 
-# =========================
-# DATA LOADING
-# =========================
-
 def load_samples(path: str) -> List[Dict]:
     if not os.path.exists(path):
         raise FileNotFoundError(f"Input file not found: {path}")
@@ -298,10 +283,6 @@ def load_samples(path: str) -> List[Dict]:
         raise RuntimeError("No usable non-null samples found in input file.")
     return samples
 
-# =========================
-# SCORING
-# =========================
-
 def score_f0(
     f0: float,
     samples: List[Dict],
@@ -328,19 +309,15 @@ def score_f0(
     score = -phase_var - closure_weight * closure_mean
     return score, phase_var, closure_mean
 
-# =========================
-# SWEEP + REFINEMENT
-# =========================
-
 def sweep_f0(
     samples: List[Dict],
     f0_min: float,
     f0_max: float,
-    steps: int,
+    steps_sweep: int,
     temperament: str,
     closure_weight: float
 ) -> Dict:
-    f0_values = np.linspace(f0_min, f0_max, steps, dtype=float)
+    f0_values = np.linspace(f0_min, f0_max, steps_sweep, dtype=float)
     best = {
         "f0": None,
         "score": -math.inf,
@@ -354,16 +331,16 @@ def sweep_f0(
             best["score"] = float(score)
             best["phase_var"] = float(phase_var)
             best["closure_mean"] = float(closure_mean)
-        if steps >= 20 and (idx + 1) % max(1, steps // 20) == 0:
-            pct = 100.0 * (idx + 1) / steps
-            print(f"[SWEEP] {idx+1}/{steps} ({pct:5.1f}%) f0={f0:8.3f} Hz score={score: .6e}")
+        if steps_sweep >= 20 and (idx + 1) % max(1, steps_sweep // 20) == 0:
+            pct = 100.0 * (idx + 1) / steps_sweep
+            print(f"[SWEEP] {idx+1}/{steps_sweep} ({pct:5.1f}%) f0={f0:8.3f} Hz score={score: .6e}")
     return best
 
 def refine_f0(
     samples: List[Dict],
     f0_min: float,
     f0_max: float,
-    steps: int,
+    steps_sweep: int,
     temperament: str,
     closure_weight: float,
     target_step: float = 0.1,
@@ -371,7 +348,7 @@ def refine_f0(
 ) -> Dict:
     current_min = f0_min
     current_max = f0_max
-    current_steps = steps
+    current_steps = steps_sweep
     best_overall: Dict = {
         "f0": None,
         "score": -math.inf,
@@ -434,10 +411,6 @@ def evaluate_references(
         })
     return rows
 
-# =========================
-# EM BAND CLASSIFICATION
-# =========================
-
 def classify_em_band(freq: float) -> str:
     if freq <= 0.0:
         return "static"
@@ -459,12 +432,9 @@ def classify_em_band(freq: float) -> str:
         return "xray"
     return "gamma"
 
-# =========================
-# OCTAVE + TUNING TABLES
-# =========================
-
-def build_octave_frequencies(f0: float) -> Dict:
-    chromatic = [float(f0 * (2.0 ** (k / 12.0))) for k in range(12)]
+def build_octave_frequencies(f0: float, temperament: str = "equal") -> Dict:
+    steps = steps_for_temperament(temperament)
+    chromatic = [float(f0 * (2.0 ** (k / float(steps)))) for k in range(12)]
     majors: Dict[str, float] = {}
     for name, deg in zip(PRINCIPLES, MAJOR_DEGREES):
         majors[name] = chromatic[deg]
@@ -477,13 +447,14 @@ def build_octave_frequencies(f0: float) -> Dict:
         "harmonics_sharp": harmonics,
     }
 
-def build_multi_octave_table(f0: float, octaves: Tuple[int, int] = (-1, 1)) -> Dict:
+def build_multi_octave_table(f0: float, octaves: Tuple[int, int] = (-1, 1), temperament: str = "equal") -> Dict:
+    steps = steps_for_temperament(temperament)
     lo, hi = octaves
     table: Dict[str, Dict[str, float]] = {}
     for o in range(lo, hi + 1):
         base = f0 * (2.0 ** o)
         octave_key = f"oct_{o:+d}"
-        chrom = [float(base * (2.0 ** (k / 12.0))) for k in range(12)]
+        chrom = [float(base * (2.0 ** (k / float(steps)))) for k in range(12)]
         octave_data: Dict[str, float] = {}
         for idx, freq in enumerate(chrom):
             name = NOTE_NAMES_A_ROOT[idx]
@@ -492,23 +463,20 @@ def build_multi_octave_table(f0: float, octaves: Tuple[int, int] = (-1, 1)) -> D
         table[octave_key] = octave_data
     return table
 
-# =========================
-# ELEMENT → FREQUENCY MAPPING
-# =========================
-
-def build_element_mapping(f0: float, max_Z: int = 118) -> Dict[str, Dict[str, object]]:
+def build_element_mapping(f0: float, max_Z: int = 118, temperament: str = "equal") -> Dict[str, Dict[str, object]]:
+    steps = steps_for_temperament(temperament)
     mapping: Dict[str, Dict[str, object]] = {}
     max_Z = min(max_Z, len(ELEMENTS))
     for Z in range(1, max_Z + 1):
         idx = Z - 1
         symbol, name = ELEMENTS[idx]
         shifted = idx - 5
-        degree = shifted % 12
-        cycle = math.floor(shifted / 12.0)
+        degree = int(shifted % steps)
+        cycle = math.floor(shifted / float(steps))
         note_oct = 4 + cycle
         oct_shift = note_oct - 4
         ratio_oct = 2.0 ** oct_shift
-        ratio_degree = 2.0 ** (degree / 12.0)
+        ratio_degree = 2.0 ** (degree / float(steps))
         freq = float(f0 * ratio_oct * ratio_degree)
         note_name = NOTE_NAMES_A_ROOT[degree]
         label = f"{note_name}{note_oct}"
@@ -555,24 +523,22 @@ def build_element_mapping(f0: float, max_Z: int = 118) -> Dict[str, Dict[str, ob
             }
     return mapping
 
-# =========================
-# 12D LADDER (AUDIO → EM)
-# =========================
-
 def build_12d_ladder(
     f0: float,
     n_min: int = -240,
-    n_max: int = 336
+    n_max: int = 336,
+    temperament: str = "equal"
 ) -> List[Dict[str, object]]:
+    steps = steps_for_temperament(temperament)
     ladder: List[Dict[str, object]] = []
     for n in range(n_min, n_max + 1):
-        ratio = 2.0 ** (n / 12.0)
+        ratio = 2.0 ** (n / float(steps))
         freq = float(f0 * ratio)
         band = classify_em_band(freq)
         wavelength = float(C_LIGHT / freq) if freq > 0.0 else float("inf")
         energy_eV = float(H_PLANCK * freq / E_CHARGE) if freq > 0.0 else 0.0
-        note_degree = n % 12
-        octave_index = n // 12
+        note_degree = int(n % 12)
+        octave_index = int(n // 12)
         note_name = NOTE_NAMES_A_ROOT[note_degree]
         label = f"{note_name}_{octave_index}"
         ladder.append({
@@ -613,10 +579,6 @@ def reindex_ladder_dimensions(
         p["dim_index"] = base_dim
         p["harmonic_cycle"] = cycle
 
-# =========================
-# GLOBAL COALESCENCE SCAN
-# =========================
-
 def scan_coalescence_over_ladder(
     samples: List[Dict],
     ladder: List[Dict[str, object]],
@@ -647,10 +609,6 @@ def scan_coalescence_over_ladder(
         results_sorted = results_sorted[:top_k]
     return results_sorted
 
-# =========================
-# EXPORT
-# =========================
-
 def export_solution_json(
     path: str,
     best: Dict,
@@ -678,10 +636,6 @@ def export_solution_json(
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-# =========================
-# MAIN
-# =========================
-
 def main() -> None:
     import argparse
 
@@ -692,7 +646,7 @@ def main() -> None:
     parser.add_argument("--f0-min", type=float, default=200.0, help="Minimum base frequency (Hz)")
     parser.add_argument("--f0-max", type=float, default=600.0, help="Maximum base frequency (Hz)")
     parser.add_argument("--steps", type=int, default=401, help="Number of f0 samples in initial sweep")
-    parser.add_argument("--temperament", choices=["equal"], default="equal", help="Temperament model")
+    parser.add_argument("--temperament", choices=["equal", "11tet"], default="equal", help="Temperament model")
     parser.add_argument("--closure-weight", type=float, default=10.0, help="Weight on crown magnitude closure in score")
     parser.add_argument("--target-step", type=float, default=0.1, help="Target frequency resolution (Hz) for refinement")
     parser.add_argument("--max-rounds", type=int, default=6, help="Maximum refinement rounds")
@@ -714,7 +668,7 @@ def main() -> None:
         samples=samples,
         f0_min=args.f0_min,
         f0_max=args.f0_max,
-        steps=args.steps,
+        steps_sweep=args.steps,
         temperament=args.temperament,
         closure_weight=args.closure_weight,
         target_step=args.target_step,
@@ -727,7 +681,7 @@ def main() -> None:
     print(f"  phase_var    : {best['phase_var']:.6e}")
     print(f"  closure_mean : {best['closure_mean']:.6e}")
 
-    octave = build_octave_frequencies(best["f0"])
+    octave = build_octave_frequencies(best["f0"], args.temperament)
     chrom = octave["chromatic"]
     majors = octave["principles_major"]
     harms = octave["harmonics_sharp"]
@@ -748,7 +702,7 @@ def main() -> None:
         f = harms[label]
         print(f"  {label:3s} (degree {deg:2d}, note {NOTE_NAMES_A_ROOT[deg]:2s}): {f:9.4f} Hz")
 
-    multi_oct = build_multi_octave_table(best["f0"], octaves=(-1, 1))
+    multi_oct = build_multi_octave_table(best["f0"], octaves=(-1, 1), temperament=args.temperament)
 
     print("\nMULTI-OCTAVE TABLE (A-root, -1..+1 around f0*)")
     for oct_key, notes in multi_oct.items():
@@ -756,7 +710,7 @@ def main() -> None:
         for label, freq in sorted(notes.items(), key=lambda kv: kv[0]):
             print(f"    {label:4s}: {freq:9.4f} Hz")
 
-    elem_map = build_element_mapping(best["f0"], max_Z=args.max_Z)
+    elem_map = build_element_mapping(best["f0"], max_Z=args.max_Z, temperament=args.temperament)
 
     print("\nELEMENTAL MAPPING (selected elements)")
     interesting_Z = [1, 6, 7, 8, 26, 29, 47, 79, 82, 92]
@@ -771,7 +725,7 @@ def main() -> None:
             f"λ={e['wavelength_m']: .3e} m, E={e['energy_eV']: .3e} eV, band={e['band']}"
         )
 
-    ladder = build_12d_ladder(best["f0"], n_min=args.n_min, n_max=args.n_max)
+    ladder = build_12d_ladder(best["f0"], n_min=args.n_min, n_max=args.n_max, temperament=args.temperament)
     print(f"\n12D LADDER SIZE: {len(ladder)} points")
 
     visible_center = find_visible_center(ladder)
