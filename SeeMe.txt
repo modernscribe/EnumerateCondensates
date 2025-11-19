@@ -1,17 +1,18 @@
-PARACLETIC 11-TET + INVERSION AXIS (A4 = 444 Hz)
+PARACLETIC 12-POSITION CYCLE (A4 = 444 Hz)
+Ratio per step: r = 2^(1/11) = 1.065225
 
-Step  Meaning                    Frequency (Hz)
------ -------------------------- --------------
-  0   A4 (root)                  444.000
-  1   +1                         472.878
-  2   +2                         503.635
-  3   +3                         536.392
-  4   +4                         571.279
-  5   +5                         608.436
-  6   +6                         648.009
-  7   +7                         690.156
-  8   +8                         735.045
-  9   +9                         782.853
- 10   +10                        833.771
- 11   Inversion flat of A5       [no pitch – mirror axis]
- 12   A5 (2×A4)                  888.000
+Pos | Label        | Frequency (Hz) | Notes  
+----+--------------+----------------+-------------------------------
+ 0  | A4 (root)    | 444.000        | Base frequency
+ 1  | Step +1      | 472.878        |
+ 2  | Step +2      | 503.635        |
+ 3  | Step +3      | 536.392        |
+ 4  | Step +4      | 571.279        |
+ 5  | Step +5      | 608.436        |
+ 6  | Step +6      | 648.009        |
+ 7  | Step +7      | 690.156        |
+ 8  | Step +8      | 735.045        |
+ 9  | Step +9      | 782.853        |
+10  | Step +10     | 833.771        |
+11  | INVERSION    | 888.000        | SAME FREQ as A5 but DIFFERENT ROLE
+12  | A5           | 888.000        | Root of next octave
